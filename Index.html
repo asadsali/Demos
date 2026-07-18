@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Calculator — Three Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#12140f;
+    --paper:#eae6da;
+    --line:#c9c2b0;
+    --go:#1f6f43;
+    --caution:#b8791a;
+    --stop:#a33328;
+    --steel:#2b3440;
+    --accent:#3a5f7d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--steel);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    padding:32px 20px 80px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto}
+  .masthead{color:#e7e2d4;margin-bottom:36px}
+  .masthead .kick{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.34em;text-transform:uppercase;opacity:.6}
+  .masthead h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(30px,5vw,52px);line-height:1;margin:8px 0 12px;letter-spacing:-.02em}
+  .masthead p{max-width:560px;font-size:14px;line-height:1.6;opacity:.72}
+  .concept-nav{display:flex;gap:6px;margin:24px 0 0;flex-wrap:wrap}
+  .concept-nav button{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;
+    background:transparent;color:#e7e2d4;border:1px solid rgba(231,226,212,.28);
+    padding:9px 16px;border-radius:2px;cursor:pointer;transition:.18s;text-transform:uppercase;
+  }
+  .concept-nav button:hover{border-color:rgba(231,226,212,.7)}
+  .concept-nav button.on{background:#e7e2d4;color:var(--steel);border-color:#e7e2d4}
+
+  .stage{background:var(--paper);border-radius:4px;padding:0;overflow:hidden;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+  .concept{display:none}
+  .concept.show{display:block}
+  .c-head{padding:26px 32px 20px;border-bottom:1px solid var(--line)}
+  .c-head .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  .c-head h2{font-family:'Fraunces',serif;font-weight:600;font-size:27px;margin:5px 0 6px;letter-spacing:-.01em}
+  .c-head .why{font-size:13px;line-height:1.55;color:#5a5546;max-width:640px}
+  .c-body{padding:30px 32px 36px}
+
+  /* shared input rail */
+  .inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px;padding-bottom:26px;border-bottom:1px dashed var(--line)}
+  .fld label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7a7362;margin-bottom:5px}
+  .fld input{width:100%;background:#f4f1e7;border:1px solid var(--line);border-radius:2px;padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--ink)}
+  .fld input:focus{outline:none;border-color:var(--accent)}
+  .mode-toggle{display:inline-flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-bottom:22px}
+  .mode-toggle button{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 16px;background:#f4f1e7;border:none;cursor:pointer;color:#7a7362}
+  .mode-toggle button.on{background:var(--steel);color:#e7e2d4}
+
+  /* ============ CONCEPT 1: THE VERDICT DIAL ============ */
+  .verdict-grid{display:grid;grid-template-columns:280px 1fr;gap:38px;align-items:center}
+  @media(max-width:720px){.verdict-grid{grid-template-columns:1fr}}
+  .gauge-wrap{position:relative;width:260px;height:260px;margin:0 auto}
+  .gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .gauge-center .word{font-family:'Fraunces',serif;font-weight:900;font-size:34px;letter-spacing:-.01em;line-height:.9}
+  .gauge-center .sub{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7a7362;margin-top:8px}
+  .gauge-center .score{font-family:'IBM Plex Mono',monospace;font-size:13px;margin-top:14px;padding:3px 10px;border:1px solid var(--line);border-radius:20px}
+  .ladder{display:flex;flex-direction:column;gap:2px}
+  .rung{display:grid;grid-template-columns:150px 1fr 92px;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .rung .rname{font-size:13px;font-weight:600}
+  .rung .rname small{display:block;font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:#8a836f;letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+  .bar{height:8px;background:#ded7c5;border-radius:6px;position:relative;overflow:hidden}
+  .bar span{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .thresh{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
+  .rval{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;text-align:right}
+  .verdict-note{grid-column:1/-1;margin-top:22px;font-size:13px;line-height:1.6;color:#4c4738;background:#f4f1e7;border-left:3px solid var(--accent);padding:14px 16px;border-radius:0 3px 3px 0}
+
+  /* ============ CONCEPT 2: THE MONEY WATERFALL ============ */
+  .fall{display:flex;flex-direction:column;gap:0;margin-bottom:8px}
+  .step{display:grid;grid-template-columns:170px 1fr 110px;align-items:center;gap:0;height:52px;position:relative}
+  .step .slbl{font-size:13px;font-weight:500}
+  .step .slbl small{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8a836f;letter-spacing:.05em}
+  .flow{height:100%;position:relative}
+  .flow .block{position:absolute;top:8px;bottom:8px;border-radius:2px;transition:all .5s cubic-bezier(.2,.8,.2,1);display:flex;align-items:center;padding:0 8px}
+  .flow .block .mtag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,.85);white-space:nowrap}
+  .samt{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;text-align:right}
+  .samt.neg{color:var(--stop)}
+  .connector{position:absolute;left:170px;right:110px;height:1px;border-top:1px dashed var(--line);bottom:0}
+  .final-band{margin-top:16px;padding:18px 20px;border-radius:3px;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  .final-band .fl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+  .final-band .fn{font-family:'Fraunces',serif;font-weight:900;font-size:30px}
+
+  /* ============ CONCEPT 3: THE DECISION CARD (baseball card) ============ */
+  .card-scene{display:grid;grid-template-columns:340px 1fr;gap:34px}
+  @media(max-width:720px){.card-scene{grid-template-columns:1fr}}
+  .rcard{background:linear-gradient(160deg,#1c2530,#2b3440);border-radius:10px;padding:22px;color:#e7e2d4;box-shadow:0 20px 40px -20px rgba(0,0,0,.6);position:relative;overflow:hidden}
+  .rcard::before{content:"";position:absolute;top:-40%;right:-30%;width:70%;height:80%;background:radial-gradient(circle,rgba(58,95,125,.5),transparent 70%)}
+  .rcard .cgrade{position:absolute;top:16px;right:18px;font-family:'Fraunces',serif;font-weight:900;font-size:44px;line-height:1}
+  .rcard .cclass{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.6}
+  .rcard .caddr{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:4px 0 2px;max-width:210px;line-height:1.05}
+  .rcard .cstrat{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8fb8d6;letter-spacing:.08em}
+  .cstats{margin-top:22px;border-top:1px solid rgba(231,226,212,.16);padding-top:14px}
+  .cstat{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(231,226,212,.1)}
+  .cstat .k{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.66}
+  .cstat .v{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600}
+  .cstat .v em{font-style:normal;font-size:10px;opacity:.5;margin-left:3px}
+  .readout h3{font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin-bottom:4px}
+  .readout .lede{font-size:13px;line-height:1.6;color:#4c4738;margin-bottom:18px}
+  .checks{display:flex;flex-direction:column;gap:9px}
+  .chk{display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.45}
+  .chk .dot{flex:0 0 18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-top:1px}
+  .chk .ctxt strong{font-weight:600}
+  .chk .ctxt small{display:block;color:#7a7362;font-family:'IBM Plex Mono',monospace;font-size:10.5px;margin-top:1px}
+
+  .legend{margin-top:26px;padding-top:18px;border-top:1px solid var(--line);display:flex;gap:22px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#7a7362;letter-spacing:.04em}
+  .legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .footnote{color:#9a94822;color:#a49d8a;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;margin-top:30px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="kick">Underwriting Interface · Concept Study</div>
+    <h1>Three ways to see a deal.</h1>
+    <p>Same standard math underneath — 70% rule, MAO, cash-on-cash, cap rate, DSCR, GRM, 50% opex rule. What changes is how fast your eye reaches go / caution / stop. Edit the inputs; every concept re-reads live.</p>
+    <div class="concept-nav">
+      <button class="on" data-c="1">01 — Verdict Dial</button>
+      <button data-c="2">02 — Money Waterfall</button>
+      <button data-c="3">03 — Decision Card</button>
+    </div>
+  </div>
+
+  <div class="stage">
+
+    <!-- ============ CONCEPT 1 ============ -->
+    <section class="concept show" id="c1">
+      <div class="c-head">
+        <div class="tag">Concept 01</div>
+        <h2>The Verdict Dial</h2>
+        <p class="why">One glance answers the only question that matters first: <em>is this a deal, yes or no?</em> The dial is a weighted composite of the individual pass/fail tests. Below it, each standard metric sits on its own track with its threshold marked as a notch — so you see not just the score, but exactly which test is dragging it down.</p>
+      </div>
+      <div class="c-body">
+        <div class="mode-toggle" id="mode1">
+          <button class="on" data-m="flip">Flip / Rehab</button>
+          <button data-m="rental">Rental / BRRRR</button>
+        </div>
+        <div class="inputs" id="in1"></div>
+        <div class="verdict-grid">
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 200 200" width="260" height="260">
+              <circle cx="100" cy="100" r="82" fill="none" stroke="#ded7c5" stroke-width="16"/>
+              <circle id="dialArc" cx="100" cy="100" r="82" fill="none" stroke="#1f6f43" stroke-width="16"
+                stroke-linecap="round" stroke-dasharray="515" stroke-dashoffset="515"
+                transform="rotate(-90 100 100)"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="word" id="dialWord">GO</div>
+              <div class="sub" id="dialSub">clears every gate</div>
+              <div class="score" id="dialScore">5 / 5 tests pass</div>
+            </div>
+          </div>
+          <div class="ladder" id="ladder1"></div>
+          <div class="verdict-note" id="note1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONCEPT 2 ============ -->
+    <section class="concept" id="c2">
+      <div class="c-head">
+        <div class="tag">Concept 02</div>
+        <h2>The Money Waterfall</h2>
+        <p class="why">Follow the dollars top to bottom. Each row is a real cash event — value in, costs out — and the bars physically shrink as money leaves the deal. You <em>watch</em> your profit or cash flow get carved out of the ARV, so an oversized rehab or a fat holding cost is impossible to miss. The last band is what you keep.</p>
+      </div>
+      <div class="c-body">
+        <div class="mode-toggle" id="mode2">
+          <button class="on" data-m="flip">Flip / Rehab</button>
+          <button data-m="rental">Rental / BRRRR</button>
+        </div>
+        <div class="inputs" id="in2"></div>
+        <div class="fall" id="fall2"></div>
+        <div class="final-band" id="band2">
+          <span class="fl" id="band2l">Net profit at sale</span>
+          <span class="fn" id="band2n">$0</span>
+        </div>
+        <div class="legend">
+          <span><b style="background:#3a5f7d"></b>Value / income in</span>
+          <span><b style="background:#a33328"></b>Money out</span>
+          <span><b style="background:#1f6f43"></b>What you keep</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONCEPT 3 ============ -->
+    <section class="concept" id="c3">
+      <div class="c-head">
+        <div class="tag">Concept 03</div>
+        <h2>The Decision Card</h2>
+        <p class="why">A trading-card readout for a property — a single collectible object you can screenshot, text to a partner, or line up against three other deals. The letter grade is the composite; the stat block holds the standard numbers; the checklist translates each metric into plain-language pass/fail so a partner with no spreadsheet fluency still gets it.</p>
+      </div>
+      <div class="c-body">
+        <div class="mode-toggle" id="mode3">
+          <button class="on" data-m="flip">Flip / Rehab</button>
+          <button data-m="rental">Rental / BRRRR</button>
+        </div>
+        <div class="inputs" id="in3"></div>
+        <div class="card-scene">
+          <div class="rcard">
+            <div class="cgrade" id="cardGrade">A</div>
+            <div class="cclass" id="cardClass">Flip Candidate</div>
+            <div class="caddr">7517 S. Carpenter St</div>
+            <div class="cstrat" id="cardStrat">Fix &amp; Flip · 70% Rule</div>
+            <div class="cstats" id="cardStats"></div>
+          </div>
+          <div class="readout">
+            <h3 id="cardVerdictH">This one clears.</h3>
+            <p class="lede" id="cardLede"></p>
+            <div class="checks" id="cardChecks"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="footnote">
+    Formulas are industry-standard only · MAO = ARV×0.70 − rehab · Cash-on-cash = annual cash flow ÷ cash invested<br>
+    Cap rate = NOI ÷ price · DSCR = NOI ÷ debt service · 50% rule estimates operating expenses · Address is illustrative
+  </div>
+</div>
+
+<script>
+// ---------- shared state ----------
+const state = {
+  mode: 'flip',
+  arv: 285000, purchase: 155000, rehab: 55000,
+  holdMonths: 5, sellCostPct: 8, rate: 10, loanPct: 80,
+  // rental
+  rent: 2400, taxIns: 620, monthsHold: 0
+};
+
+const fieldsFlip = [
+  ['arv','After-repair value','$'],
+  ['purchase','Purchase price','$'],
+  ['rehab','Rehab budget','$'],
+  ['holdMonths','Hold (months)',''],
+  ['sellCostPct','Selling costs %','%'],
+  ['rate','Money rate %','%']
+];
+const fieldsRent = [
+  ['arv','Stabilized value','$'],
+  ['purchase','Purchase price','$'],
+  ['rehab','Rehab budget','$'],
+  ['rent','Monthly rent','$'],
+  ['loanPct','Loan-to-value %','%'],
+  ['rate','Interest rate %','%']
+];
+
+// ---------- standard calcs ----------
+function calc(){
+  const s=state;
+  const allIn = s.purchase + s.rehab;
+  if(s.mode==='flip'){
+    const mao = s.arv*0.70 - s.rehab;            // 70% rule max allowable offer
+    const sellCost = s.arv*(s.sellCostPct/100);
+    const loan = allIn*(s.loanPct/100);
+    const holdInterest = loan*(s.rate/100)*(s.holdMonths/12);
+    const totalCost = s.purchase + s.rehab + sellCost + holdInterest;
+    const profit = s.arv - totalCost;
+    const cashIn = allIn - loan + holdInterest;
+    const roi = cashIn>0 ? (profit/cashIn)*100 : 0;
+    const marginPct = (profit/s.arv)*100;
+    return {mao,sellCost,holdInterest,loan,totalCost,profit,cashIn,roi,marginPct,allIn};
+  } else {
+    // rental: 50% rule opex, DSCR, cap, cash-on-cash
+    const annualRent = s.rent*12;
+    const opex = annualRent*0.5;                 // 50% rule
+    const noi = annualRent - opex;
+    const loan = s.arv*(s.loanPct/100);
+    const debtSvc = loan*(s.rate/100);           // interest-approx annual debt service
+    const cashFlow = noi - debtSvc;
+    const cashIn = allIn - loan;
+    const coc = cashIn>0 ? (cashFlow/cashIn)*100 : 0;
+    const cap = (noi/s.purchase)*100;
+    const dscr = debtSvc>0 ? noi/debtSvc : 99;
+    const grm = annualRent>0 ? s.purchase/annualRent : 0;
+    return {annualRent,opex,noi,loan,debtSvc,cashFlow,cashIn,coc,cap,dscr,grm,allIn};
+  }
+}
+
+// pass/fail tests against standard rules of thumb
+function tests(c){
+  if(state.mode==='flip'){
+    return [
+      {name:'70% Rule',sub:'offer ≤ MAO',val:'$'+fmt(c.mao),pass: state.purchase <= c.mao, pct: clamp((c.mao/Math.max(state.purchase,1))*70), thr:100},
+      {name:'Profit margin',sub:'≥ 15% of ARV',val:c.marginPct.toFixed(1)+'%',pass:c.marginPct>=15, pct: clamp((c.marginPct/25)*100), thr:60},
+      {name:'Cash return',sub:'ROI ≥ 20%',val:c.roi.toFixed(0)+'%',pass:c.roi>=20, pct: clamp((c.roi/50)*100), thr:40},
+      {name:'Net profit',sub:'≥ $25k floor',val:'$'+fmt(c.profit),pass:c.profit>=25000, pct: clamp((c.profit/60000)*100), thr:42},
+      {name:'Cost basis',sub:'all-in ≤ 75% ARV',val:((c.allIn/state.arv)*100).toFixed(0)+'%',pass:(c.allIn/state.arv)<=0.75, pct: clamp((1-(c.allIn/state.arv))*160), thr:40}
+    ];
+  } else {
+    return [
+      {name:'DSCR',sub:'≥ 1.25 lender floor',val:c.dscr.toFixed(2),pass:c.dscr>=1.25, pct: clamp((c.dscr/2)*100), thr:62},
+      {name:'Cap rate',sub:'≥ 7%',val:c.cap.toFixed(1)+'%',pass:c.cap>=7, pct: clamp((c.cap/12)*100), thr:58},
+      {name:'Cash-on-cash',sub:'≥ 8%',val:c.coc.toFixed(1)+'%',pass:c.coc>=8, pct: clamp((c.coc/20)*100), thr:40},
+      {name:'Cash flow',sub:'> $0 / yr',val:'$'+fmt(c.cashFlow),pass:c.cashFlow>0, pct: clamp((c.cashFlow/8000)*100), thr:12},
+      {name:'GRM',sub:'≤ 9 (lower=better)',val:c.grm.toFixed(1),pass:c.grm<=9, pct: clamp((1-(c.grm/15))*140), thr:40}
+    ];
+  }
+}
+
+// ---------- helpers ----------
+function fmt(n){return Math.round(n).toLocaleString()}
+function clamp(v){return Math.max(2,Math.min(100,v))}
+function gradeFrom(passCount){
+  const g=['F','D','C','B','A'];return g[passCount] || 'A';
+}
+function colorFor(passRatio){
+  if(passRatio>=0.8) return '#1f6f43';
+  if(passRatio>=0.5) return '#b8791a';
+  return '#a33328';
+}
+
+// ---------- render inputs ----------
+function renderInputs(containerId){
+  const fields = state.mode==='flip'?fieldsFlip:fieldsRent;
+  const el=document.getElementById(containerId);
+  el.innerHTML='';
+  fields.forEach(([key,label,unit])=>{
+    const f=document.createElement('div');f.className='fld';
+    f.innerHTML=`<label>${label}${unit?' ('+unit+')':''}</label><input type="number" value="${state[key]}" data-k="${key}">`;
+    el.appendChild(f);
+  });
+  el.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input',e=>{state[e.target.dataset.k]=parseFloat(e.target.value)||0;renderAll();});
+  });
+}
+
+// ---------- render concept 1 ----------
+function render1(){
+  const c=calc(); const t=tests(c);
+  const passN=t.filter(x=>x.pass).length; const ratio=passN/t.length;
+  const arc=document.getElementById('dialArc');
+  const circ=515;
+  arc.style.strokeDashoffset = circ - (circ*ratio);
+  arc.setAttribute('stroke',colorFor(ratio));
+  const word=document.getElementById('dialWord');
+  const sub=document.getElementById('dialSub');
+  document.getElementById('dialScore').textContent=`${passN} / ${t.length} tests pass`;
+  if(ratio>=0.8){word.textContent='GO';word.style.color='#1f6f43';sub.textContent='clears every gate'}
+  else if(ratio>=0.5){word.textContent='WATCH';word.style.color='#b8791a';sub.textContent='marginal — negotiate'}
+  else{word.textContent='PASS';word.style.color='#a33328';sub.textContent='fails core tests'}
+
+  const lad=document.getElementById('ladder1');lad.innerHTML='';
+  t.forEach(x=>{
+    const row=document.createElement('div');row.className='rung';
+    const col = x.pass?'#1f6f43':'#a33328';
+    row.innerHTML=`
+      <div class="rname">${x.name}<small>${x.sub}</small></div>
+      <div class="bar"><span style="width:${x.pct}%;background:${col}"></span><div class="thresh" style="left:${x.thr}%"></div></div>
+      <div class="rval" style="color:${col}">${x.val}</div>`;
+    lad.appendChild(row);
+  });
+  const fail=t.find(x=>!x.pass);
+  const note=document.getElementById('note1');
+  if(!fail){note.textContent='Every standard gate clears. The notch on each track is the industry threshold; you\u2019re right of all five. Verify comps and rehab scope before committing.';}
+  else{note.innerHTML=`Weakest link: <strong>${fail.name}</strong> (${fail.val}, needs ${fail.sub}). The notch shows where the threshold sits \u2014 close that gap or walk.`;}
+}
+
+// ---------- render concept 2 ----------
+function render2(){
+  const c=calc();
+  const fall=document.getElementById('fall2');fall.innerHTML='';
+  let rows, maxVal, keep, keepLabel;
+  if(state.mode==='flip'){
+    maxVal=c.arv;
+    rows=[
+      ['After-repair value','ARV \u00d7 sale',c.arv,'in'],
+      ['Purchase','acquisition',-state.purchase,'out'],
+      ['Rehab','scope of work',-state.rehab,'out'],
+      ['Holding / interest',state.holdMonths+' mo @ '+state.rate+'%',-c.holdInterest,'out'],
+      ['Selling costs',state.sellCostPct+'% of ARV',-c.sellCost,'out']
+    ];
+    keep=c.profit;keepLabel='Net profit at sale';
+  } else {
+    maxVal=c.annualRent;
+    rows=[
+      ['Gross rent','annual income',c.annualRent,'in'],
+      ['Operating expenses','50% rule',-c.opex,'out'],
+      ['Debt service',state.rate+'% on loan',-c.debtSvc,'out']
+    ];
+    keep=c.cashFlow;keepLabel='Annual cash flow';
+  }
+  rows.forEach(([lbl,sub,amt,dir])=>{
+    const step=document.createElement('div');step.className='step';
+    const w=clamp((Math.abs(amt)/maxVal)*100);
+    const col = dir==='in' ? '#3a5f7d' : '#a33328';
+    step.innerHTML=`
+      <div class="slbl">${lbl}<small>${sub}</small></div>
+      <div class="flow"><div class="block" style="width:${w}%;background:${col}"><span class="mtag">${dir==='out'?'\u2212':''}$${fmt(Math.abs(amt))}</span></div></div>
+      <div class="samt ${amt<0?'neg':''}">${amt<0?'\u2212':''}$${fmt(Math.abs(amt))}</div>`;
+    fall.appendChild(step);
+  });
+  const band=document.getElementById('band2');
+  const good = keep>0;
+  band.style.background = good?'linear-gradient(90deg,#1f6f43,#2a875380)':'linear-gradient(90deg,#a33328,#c25a4d80)';
+  band.querySelector('#band2l').textContent=keepLabel;
+  band.querySelector('#band2n').textContent=(keep<0?'\u2212$':'$')+fmt(Math.abs(keep));
+}
+
+// ---------- render concept 3 ----------
+function render3(){
+  const c=calc(); const t=tests(c);
+  const passN=t.filter(x=>x.pass).length; const ratio=passN/t.length;
+  document.getElementById('cardGrade').textContent=gradeFrom(passN);
+  document.getElementById('cardGrade').style.color=colorFor(ratio)==='#a33328'?'#e0857a':(colorFor(ratio)==='#b8791a'?'#e0b45f':'#7fd4a3');
+  document.getElementById('cardClass').textContent = state.mode==='flip'?'Flip Candidate':'Rental Candidate';
+  document.getElementById('cardStrat').textContent = state.mode==='flip'?'Fix & Flip · 70% Rule':'Buy & Hold · 50% Rule';
+
+  const stats=document.getElementById('cardStats');stats.innerHTML='';
+  let list;
+  if(state.mode==='flip'){
+    list=[['MAO','$'+fmt(c.mao),''],['Net profit','$'+fmt(c.profit),''],['ROI',c.roi.toFixed(0),'%'],['Margin',c.marginPct.toFixed(1),'% ARV'],['Cash in','$'+fmt(c.cashIn),'']];
+  } else {
+    list=[['NOI','$'+fmt(c.noi),'/yr'],['Cap rate',c.cap.toFixed(1),'%'],['Cash-on-cash',c.coc.toFixed(1),'%'],['DSCR',c.dscr.toFixed(2),''],['Cash flow','$'+fmt(c.cashFlow),'/yr']];
+  }
+  list.forEach(([k,v,e])=>{
+    const r=document.createElement('div');r.className='cstat';
+    r.innerHTML=`<span class="k">${k}</span><span class="v">${v}<em>${e}</em></span>`;
+    stats.appendChild(r);
+  });
+
+  const h=document.getElementById('cardVerdictH');
+  const lede=document.getElementById('cardLede');
+  if(ratio>=0.8){h.textContent='This one clears.';lede.textContent='Passes every standard screen for this strategy. Grade reflects how many of the five core tests hold.';}
+  else if(ratio>=0.5){h.textContent='Playable, not clean.';lede.textContent='Some tests pass, others don\u2019t. Usually a price or scope problem \u2014 see the red rows below.';}
+  else{h.textContent='Walk unless it moves.';lede.textContent='Fails most core screens as entered. Would need a materially lower basis to work.';}
+
+  const checks=document.getElementById('cardChecks');checks.innerHTML='';
+  t.forEach(x=>{
+    const row=document.createElement('div');row.className='chk';
+    row.innerHTML=`
+      <div class="dot" style="background:${x.pass?'#1f6f43':'#a33328'}">${x.pass?'\u2713':'\u2717'}</div>
+      <div class="ctxt"><strong>${x.name}: ${x.val}</strong><small>needs ${x.sub}</small></div>`;
+    checks.appendChild(row);
+  });
+}
+
+function renderAll(){render1();render2();render3();}
+
+// ---------- wire up ----------
+function bindMode(toggleId){
+  document.getElementById(toggleId).querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      state.mode=b.dataset.m;
+      ['mode1','mode2','mode3'].forEach(mid=>{
+        document.getElementById(mid).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.m===state.mode));
+      });
+      ['in1','in2','in3'].forEach(renderInputs);
+      renderAll();
+    });
+  });
+}
+['mode1','mode2','mode3'].forEach(bindMode);
+['in1','in2','in3'].forEach(renderInputs);
+
+document.querySelectorAll('.concept-nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.concept-nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.concept').forEach(c=>c.classList.remove('show'));
+    document.getElementById('c'+b.dataset.c).classList.add('show');
+  });
+});
+
+renderAll();
+</script>
+</body>
+</html>
